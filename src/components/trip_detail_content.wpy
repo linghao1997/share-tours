@@ -1,0 +1,155 @@
+<style lang="less">
+  .trip-detail-day {
+    margin: 0 40rpx;
+  }
+  .trip-day-item {
+    box-shadow: 0 4rpx #c9c9c9;
+    background: #fff;
+    .trip-day-content {
+      display: block;
+      margin: 0 20rpx;
+      padding: 20rpx 0;
+      font-size: 28rpx;
+      word-break: break-word;
+      white-space: pre-line;
+      background-color: #fff;
+      color: #5c5c5c;
+    }
+    .trip-day-image {
+      width: 100%;
+    }
+  }
+  .trip-day-footer {
+    padding: 20rpx 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 24rpx;
+    color: #999;
+    .time-img {
+      margin: 0 20rpx 0;
+      width: 24rpx;
+      height: 24rpx;
+    }
+    .time-info {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+    }
+    .city {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      margin-right: 20rpx;
+      font-size: 24rpx;
+      height: 44rpx;
+      background-color: #f2f2f2;
+      border-radius: 44rpx;
+      padding: 0 20rpx;
+      max-width: 270rpx;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #4abdcc;
+    }
+    image {
+      margin-right: 10rpx;
+      width: 16rpx;
+      height: 24rpx;
+    }
+  }
+  .day-marker {
+    color: #a8915e;
+    font-size: 28rpx;
+    font-weight: bold;
+    line-height: 32rpx;
+    height: 32rpx;
+  }
+  .circle {
+    display: inline-block;
+    width: 16rpx;
+    height: 16rpx;
+    background-color: #fff;
+    border-radius: 16rpx;
+    border: 8rpx solid #e7ddc6;
+    margin: 0 8rpx;
+    vertical-align: text-top;
+  }
+
+  .wp-sep {
+    background: #e7ddc6;
+    height: 36rpx;
+    margin: 4rpx 0rpx 0 20rpx;
+    width: 8rpx;
+  }
+  .trip-day-count {
+    margin: 0 40rpx;
+    .wp-sep {
+      margin-top: 0;
+    }
+  }
+</style>
+
+<template>
+  <repeat for="{{tripDetail.days}}" key="index" index="index" item="day">
+    <view class="trip-day-count">
+      <view class="day-marker">
+        <text class="circle"></text>
+        {{day.date}} 第{{day.day}}天
+      </view>
+      <view class="wp-sep"></view>
+    </view>
+    <view class="trip-detail-day">
+      <repeat for="{{day.waypoints}}" key="index" index="index" item="waypoint">
+        <view class="trip-day-item">
+          <view style="background: url({{waypoint.photo_webtrip}}) no-repeat; background-size: cover; background-position: center center; height: 680rpx"
+            wx:if="{{waypoint.photo_webtrip}}"></view>
+          <text class="trip-day-content">{{waypoint.text}}</text>
+          <view class="trip-day-footer">
+            <view class="time-info">
+              <image class="time-img" src="../../images/time.png" lazy-load="true"></image>
+              <text class="time">{{waypoint.local_time}}</text>
+            </view>
+            <view wx:if="{{waypoint.country}}" class="city">
+              <image class="city-img" src="../../images/location.png"></image>
+              {{waypoint.country}} {{waypoint.city}}
+            </view>
+          </view>
+        </view>
+        <view class="wp-sep"></view>
+      </repeat>
+    </view>
+  </repeat>
+</template>
+
+<script>
+  import wepy from "wepy";
+
+  import api from "../api/api"
+  import util from "../util/util";
+  import tip from '../util/tip'
+
+  const formatTime = util.formatTime;
+  const formatMileage = util.formatMileage;
+
+  export default class TripDetailContent extends wepy.component {
+    components = {}
+
+    props = {
+      tripDetail: {
+        default: {},
+        type: Object
+      }
+    }
+
+    data = {}
+
+    computed = {}
+
+    methods = {}
+
+    events = {}
+
+    onLoad() {}
+  }
+</script>

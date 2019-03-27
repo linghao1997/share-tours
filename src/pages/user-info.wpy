@@ -1,0 +1,70 @@
+<template>
+    <van-cell  size="large">
+        <view slot="title">
+            <view class="van-cell-text">头像</view>
+        </view>
+      <van-icon
+        slot="right-icon"
+        name="{{userInfo.avatarUrl}}"
+        class="van-cell__right-icon"
+        size="144rpx"
+      />
+    </van-cell>
+
+    <van-cell-group>
+      <van-cell
+        title="姓名"
+        value="{{userInfo.nickName}}"
+      />
+      <van-cell
+        title="性别"
+        value="{{gender}}"
+      />
+      <van-cell
+        title="城市"
+        value="{{userInfo.country}} {{userInfo.city}}"
+      />
+    </van-cell-group>
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class userInfo extends wepy.page {
+    config = {
+      navigationBarTitleText: '个人信息'
+    }
+
+    data = {
+        result:[],
+        userInfo:{}
+    }
+
+    methods = {
+
+    }
+
+    computed = {
+        gender() {
+          const gender = parseInt(this.userInfo.gender)
+          return gender === 1 ? '男' : gender === 0 ? '女' : 'unknown'
+        }
+    }
+     async onLoad () {
+        this.$parent.getUserInfo().then(user => {
+        this.userInfo = user
+        this.$apply()
+        console.log(this.data)
+        })
+    }
+}
+  
+</script>
+<style>
+.van-cell__right-icon view img{
+    border-radius:5px;
+}
+.van-cell-text{
+    line-height: 160rpx;
+}
+
+</style>

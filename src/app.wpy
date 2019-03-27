@@ -1,0 +1,178 @@
+<script>
+  import wepy from 'wepy'
+  import './lib/wepy'
+  import 'wepy-async-function'
+  import state from './lib/state'
+  import { formSubmitformId } from './lib/util'
+
+
+  export default class extends wepy.app {
+    constructor () {
+      super()
+      this.use('requestfix');
+      this.use('promisify');
+    }
+    config = {
+
+        permission:{
+            "scope.userLocation": {
+                "desc": "你的位置信息将用于小程序位置接口的效果展示"
+            }
+        },
+      pages: [
+        'pages/index',
+        'pages/author-detail',
+        
+        'pages/trip-detail',
+        
+        
+        
+        
+        
+        
+        
+        'pages/user-center',
+        
+        
+        
+        'pages/user-info',
+        
+        
+        'pages/user-release',
+        'pages/canvas',
+        
+        
+        
+        
+          
+        
+        
+        
+        
+        'pages/issue',
+        
+        
+        'pages/user-collect',
+        
+        
+        'pages/user-notice',
+        
+        
+        
+        'pages/message',
+        
+      ],
+      window: {
+        backgroundTextStyle: 'light',
+        backgroundColor: '#30C0AE',
+        navigationBarBackgroundColor: '#30C0AE',
+        navigationBarTextStyle: 'white',
+        enablePullDownRefresh: true
+      },
+      networkTimeout: {
+        request: 30000,
+        uploadFile: 30000
+      },
+      usingComponents: {
+        'van-button': '../components/vant/button/index',
+        "van-field": "../components/vant/field/index",
+        "van-tab": "../components/vant/tab/index",
+        "van-tabs": "../components/vant/tabs/index",
+        "van-icon": "../components/vant/icon/index",
+        "van-collapse": "../components/vant/collapse/index",
+        "van-collapse-item": "../components/vant/collapse-item/index",
+        "van-tree-select": "../components/vant/tree-select/index",
+        "van-rate": "../components/vant/rate/index",
+        "van-stepper": "../components/vant/stepper/index",
+        "van-cell": "../components/vant/cell/index",
+        "van-cell-group": "../components/vant/cell-group/index",
+        "van-tabbar": "../components/vant/tabbar/index",
+        "van-tabbar-item": "../components/vant/tabbar-item/index",
+        "van-search": "../components/vant/search/index",
+        "van-dialog": "../components/vant/dialog/index",
+        "van-progress": "../components/vant/progress/index",
+        "van-slider": "../components/vant/slider/index",
+        "van-toast": "../components/vant/toast/index"
+
+      }
+    }
+    
+    globalData = {
+      userType: 0,
+      db:'',
+      appid:'wxd04d56fa1f3e8a3d',
+      secret:'748af97deceb7884857f424bd5efe6ba',
+    }
+
+    async onLaunch (options) {
+        state.scene = options.scene
+
+        var navigationbarColor = wx.getStorageSync('navigationbar-color')
+        console.log(navigationbarColor)
+
+        wx.cloud.init({
+            traceUser: true
+        })
+        const db = wx.cloud.database()
+        this.db = db
+    }
+
+    async Add (collect,obj){            //添加数据
+        this.db.collection(collect).add({
+            data:obj
+        }).then(res => {
+            console.log(res)
+        })
+    }
+
+    async select (collection,obj){      //查询数据
+        this.db.collection(collection).where(obj).get().then(res => {
+            console.log(res)
+        })
+    }
+
+    async Delete (collection,_id) {     //删除数据
+        this.db.collection(collection).doc(_id).remove()
+    }
+
+    async Detail (collection,_id,data) {    //更新数据
+        this.db.collection(collection).doc(_id).update(data).then(res => {
+            console.log(res.data)
+        })  
+    }
+    
+    getUserInfo() {
+    if (this.globalData.userInfo) {
+      return new Promise((resolve, reject) => {
+        resolve(this.globalData.userInfo)
+      })
+    } else {
+      return wepy.getUserInfo().then(res => {
+        this.globalData.userInfo = res.userInfo
+        return res.userInfo
+      })
+    }
+    }
+
+    getLogin (){
+      wx.login({
+        success: function (loginCode) {
+          var appid = 'wxd04d56fa1f3e8a3d'; //填写微信小程序appid
+          var secret = '748af97deceb7884857f424bd5efe6ba'; //填写微信小程序secret
+          wx.request({
+            url: 'https://api.weixin.qq.com/sns/jscode2session?appid='+appid+'&secret='+secret+'&grant_type=authorization_code&js_code='+loginCode.code,
+            header: {
+                'content-type': 'application/json'
+            },
+            success: function(res) {
+              console.log(res.data.openid) //获取openid
+            }
+          })
+        }
+      })
+    }
+  }
+</script>
+<style lang="scss">
+ 
+</style>

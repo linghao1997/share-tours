@@ -1,0 +1,213 @@
+<template>
+
+    <view class="collect">
+        <view >
+            <image class="image" src="{{userInfo.avatarUrl}}"/>
+        </view>
+        <view class="collect-content">
+            <view class="title">1篇游记</view>
+            <view class="tag">
+                <text>100字</text>
+                <text>3图片</text>
+                <text>10浏览</text>
+            </view>
+        </view>
+    </view>
+
+
+    <view class="content">
+        <view class="top">
+            <image class="thumb" src="{{userInfo.avatarUrl}}" />
+            <view class="distance">
+                <van-icon name="location" />
+                <text>三亚湾</text>
+            </view>
+        </view>
+
+
+        <view class="article">
+            <text class="article-title">文章标题</text>
+            <view class="article-content">
+                <text class="article-postdate">发表于  2019年/03/17</text>
+                <view class="article-interact">
+                    <view class="icon">
+                        <van-icon name="browsing-history" />2
+                    </view>
+                    <view class="icon">
+                        <van-icon name="like" />5
+                    </view>
+                    <view class="icon">
+                        <van-icon name="comment" />10
+                    </view>
+                </view>
+            </view>
+        </view>
+    </view>
+
+    
+    <view>
+        <button @tap="getMyData">添加</button>
+    </view>
+
+    <view>
+        <button @tap="setMyData">获取</button>
+    </view>
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class userRelease extends wepy.page {
+    config = {
+      navigationBarTitleText: '我的发布'
+    }
+
+    data = {
+        result:[],
+        userInfo:{},
+        userInfos:[],
+    }
+
+    methods = {
+        // getMyData (){
+        //     let that = this
+        //     wx.cloud.callFunction({
+        //         name: 'getTravelingData',
+        //         data: {
+        //             database:'traveling'
+        //         }
+        //     }).then(res => {
+        //         console.log(res.result.data)
+        //             that.userInfos = res.result.data
+        //             that.$apply()
+        //         console.log(that.data)
+        //     })
+        // },
+        // setMyData (){
+        //     let that = this 
+        //     for(var i = 0 ;i<180; i++){
+        //         that.$parent.db.collection('userInfo').add({
+        //           data: that.userInfos[i].user
+        //         }).then(res => {
+        //             console.log(res)
+        //         })
+        //     }
+        // }
+
+    }
+
+    computed = {
+    }
+
+
+    async onLoad () {
+        this.$parent.getUserInfo().then(user => {
+        this.userInfo = user
+        this.$apply()
+        console.log(this.data)
+        })
+
+    }
+}
+  
+</script>
+<style>
+.collect{
+    padding:30rpx 20rpx;
+    height:137rpx;
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    border-bottom: 1px solid #ccc;
+}
+.image{
+    width:140rpx;
+    height:140rpx;
+    border-radius: 50%;
+}
+.collect-content{
+    margin-left:20rpx;
+    margin-top:20rpx;
+    display:flex;
+    flex-direction:column;
+}
+.content{
+    margin-left:20rpx;
+    margin-top:20rpx;
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 0 5px #bbb;
+    width:350px;
+    border-radius:10px;
+
+}
+.thumb{
+    width:700rpx;
+    height:450rpx;
+    border-radius: 10px;
+}
+.distance{
+    position: relative;
+    top:-115rpx;
+    background-color:#fff;
+    width:129rpx;
+    font-size:28rpx;
+    border-radius:0 5px 5px 0;
+
+}
+.article{
+   display: flex;
+   flex-direction: column; 
+   padding:0 10px;
+}
+.article-title{
+    font-family: "微软雅黑";
+    font-size: 32rpx;
+    font-weight:bold;
+
+
+}
+.article-content{
+    display: flex;
+    flex-direction: row;
+}
+.article-interact{
+    display: flex;
+    flex-direction: row;
+    position:relative;
+    right:-160rpx;
+    font-size: 30rpx;
+}
+.article-postdate{
+    font-size: 30rpx;
+}
+.icon{
+    margin-right:5px;
+}
+.title{
+    font-family: "微软雅黑";
+    font-weight: bold;
+}
+.describe{
+    color:#999;
+    font-size: 26rpx;
+    overflow: hidden;
+}
+.tag{
+    position:absolute;
+    bottom: 40rpx;
+}
+.tag text{
+    font-size: 28rpx;
+    padding:0 3px;
+}
+
+.collect-type{
+    position: relative;
+    right: -310rpx;
+    font-size: 25rpx;
+    color:#30C0AE;
+    padding:0 3px;
+    border:1px solid #30C0AE;
+}
+
+</style>

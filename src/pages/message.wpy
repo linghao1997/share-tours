@@ -1,0 +1,49 @@
+<template>
+
+
+
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class Message extends wepy.page {
+    config = {
+      navigationBarTitleText: '消息'
+    }
+
+    data = {
+    }
+
+    methods = {
+    }
+
+    onLoad () {
+        wx.cloud.callFunction({                 //引用云函数 
+            name: 'test',
+            complete: res => {
+              console.log('callFunction test result: ', res)
+            }
+          })
+        wx.cloud.callFunction({
+            name: 'Promise',
+            data: {
+              a: 1,
+              b: 2,
+            },
+            complete: res => {
+              console.log('callFunction test result: ', res.result)
+            },
+          })
+        wx.cloud.callFunction({
+            name: 'getTools',
+            complete: res => {
+              console.log(res)
+            },
+          })
+      }
+}
+  
+</script>
+<style>
+    
+</style>

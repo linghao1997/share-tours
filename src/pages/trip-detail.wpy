@@ -1,0 +1,301 @@
+<template>
+    <swiper indicator-dots="true"  duration="1000" class="swiper" indicator-active-color="#FFD700"  indicator-color="#999">
+        <swiper-item>
+            <image src="{{tripInfo.days[1].waypoints[1].photo}}" class="slide-image" mode="widthFix" />
+        </swiper-item>
+        <swiper-item>
+            <image src="{{tripInfo.days[2].waypoints[1].photo}}" class="slide-image" mode="widthFix" />
+        </swiper-item>
+        <swiper-item>
+            <image src="{{tripInfo.days[3].waypoints[1].photo}}" class="slide-image" mode="widthFix" />
+        </swiper-item>
+        <swiper-item>
+            <image src="{{tripInfo.days[4].waypoints[1].photo}}" class="slide-image" mode="widthFix"/>
+        </swiper-item>
+        <swiper-item>
+            <image src="{{tripInfo.days[5].waypoints[1].photo}}" class="slide-image" mode="widthFix"/>
+        </swiper-item>
+    </swiper>
+
+
+    <view class="author-info">
+        <view class="author-left">
+            <image class="author-img" src="{{tripInfo.user.avatar_l}}" />
+            <view class="author-arrow">
+                <text class="author-name">{{tripInfo.user.name}}</text>
+                <text class="author-time">{{tripInfo.last_day}}</text>
+            </view>
+        </view>
+        <view class="content-collect" @tap="collect">
+            <van-icon name="{{iconName}}" size="46rpx" color="{{iconColor}}"/>
+            <text style="font-size:26rpx;">{{collectHint}}</text>
+        </view> 
+    </view>
+
+    <view class="content">
+        <view class="trip-top">
+            <view class="location" @tap="submit">
+                <van-icon name="location" />
+                <text>{{tripInfo.cities[0]}}</text>
+                <text>{{tripInfo.cities[1]}}</text>
+            </view>
+        </view>
+
+        <view class="trip-center">
+            <block wx:for="{{tripInfo.days}}" wx:key="index">
+                <view class="trip-content">
+                    <view class="trip-img">
+                        <image style="width:100%;height:100%;" src="{{item.waypoints[0].photo}}" mode="widthFix" />
+                    </view>
+                    <view class="trip-rel">
+                        <view style="font-size:32rpx;">Day 0{{item.day}}</view>
+                        <view style="font-size:26rpx;"><view style="width:25px;height:10px;display:inline-block;"></view>{{item.waypoints[1].text}}{{item.waypoints[2].text}}</view>
+                    </view>
+                </view> 
+            </block>
+            
+        </view>
+    </view>
+    
+    <van-toast id="van-toast" />
+
+</template>
+<script>
+  import wepy from 'wepy'
+  import Toast from '../components/vant/toast/toast';
+
+
+  export default class TripDetail extends wepy.page {
+    config = {
+      navigationBarTitleText: '旅行详情'
+    }
+
+    data = {
+        tripInfo:{},
+        userInfo:{},
+        collectJudge:false,
+        iconName:'star-o',         
+        collectHint:"收藏",
+        iconColor:'#000',
+        _openid:'',
+    }
+
+    methods = {
+        collect (){
+            let tripId = this.tripInfo._id
+            console.log(this.data.userInfo)
+            let _id = this.data.userInfo._id
+            this.collectJudge = !this.collectJudge
+            if(this.collectJudge){
+                this.iconColor = "#ffd21e"
+                this.iconName = "star"
+                this.collectHint = "已收藏"
+                this.$apply()
+                this.data.userInfo.collect.push(tripId)
+                let collectArr = this.data.userInfo.collect
+                wx.setStorageSync('userInfo', this.data.userInfo)       //更新缓存
+                this.update('userInfo', _id ,collectArr,'collect')        //添加至用户收藏
+                Toast('收藏成功~');
+            }else{
+                this.iconColor = "#000"
+                this.iconName = "star-o"
+                this.collectHint = "收藏"
+                this.$apply()
+                let collectArr = this.data.userInfo.collect
+                for(var i = 0; i < collectArr.length; i++){
+                    if(collectArr[i] == tripId){
+                        collectArr.splice(i,1)
+                        console.log(collectArr)
+                    }
+                }
+                this.userInfo.collect = collectArr
+                wx.setStorageSync('userInfo', this.data.userInfo)       //更新缓存
+                this.remove(tripId)                            //取消用户收藏
+                Toast('取消收藏~');
+            }
+        },
+        submit (){
+            console.log(this.data)
+            this.collectJudge = !this.collectJudge
+        }
+    }
+
+    async  updateCollect (){
+        let collectJudge = this.data.collectJudge
+        if(collectJudge){
+            this.iconColor = "#ffd21e"
+            this.iconName = "star"
+            this.collectHint = "已收藏"
+            this.$apply()
+        }else{
+            this.iconColor = "#000"
+            this.iconName = "star-o"
+            this.collectHint = "收藏"
+            this.$apply()
+        }
+    }
+
+    async update (database, _id, collectArr,type){
+        wx.cloud.callFunction({              
+            name: 'updateCollect',
+            data:{
+                database : database,
+                _id : _id,
+                collectArr : collectArr,
+                type : type
+            },  
+            success: res => {
+            }
+        })          
+    }
+
+    async remove (tripId) {
+        let _openid = this.data._openid
+        let _id = this.data.userInfo._id
+        this.getUserInfo(_openid)
+        let userInfo = this.data.userInfo
+        let collectArr = this.data.userInfo.collect
+        for(var i = 0; i < collectArr.length; i++ ){
+            if(collectArr[i] == tripId){
+                collectArr.splice(i,1)
+            }
+        }
+        console.log(collectArr)
+        this.update('userInfo', _id ,collectArr,'collect')                         
+            
+    }
+
+    async getUserInfo (_openid){                        //拿到用户详细信息
+        wx.cloud.callFunction({              
+            name: 'getUserInfo',
+            data:{
+                database:'userInfo',
+                userOpenId:_openid
+            },  
+            success: res => {
+                console.log(res.result.data[0])
+                this.userInfo = res.result.data[0]
+                this.$apply()
+            }
+        })              
+    }
+
+    async getData ( collect, detailid){                     //获取旅途详细信息 
+        let that = this
+        let id = parseInt(detailid)                               
+        that.$parent.db.collection(collect).where({
+            id:id
+        }).get({
+              success(res) {
+                that.tripInfo = res.data[0]
+                let tripId = res.data[0]._id
+                let userInfo = wx.getStorageSync('userInfo')
+                let userCollect = userInfo.collect
+                for(var i = 0; i < userCollect.length; i++){        //校验是否已收藏
+                    if(userCollect[i] == tripId){
+                        that.collectJudge = true
+                        that.$apply()
+                        that.updateCollect()
+                    }
+                }
+                that.$apply()
+                wx.hideLoading()
+                console.log(that.data)
+            }
+        })                      
+    }
+
+    async onLoad (e) {
+        wx.showLoading({
+            title: '加载中...',
+        })
+        this.getData('tripDetails',e.id)
+        // this.getData('tripDetails',2387349956)
+        this._openid = wx.getStorageSync('openId')
+        this.userInfo = wx.getStorageSync('userInfo')
+        this.getUserInfo(wx.getStorageSync('openId'))
+        this.$apply()
+    }
+}
+  
+</script>
+<style>
+
+.trip-rel{
+    margin-bottom: 15px;
+    font-family: sans-serif;
+}
+image{
+    width:710rpx;
+    height:240px;
+}
+.author-time{
+    font-size: 26rpx;
+    color:#999;
+}
+.author-name{
+    font-size: 26rpx;
+    color: #000;
+}
+.author-arrow{
+    margin-left: 5px;
+    display: flex;
+    flex-direction: column;
+}
+.content-collect{
+    position: absolute;
+    right: 20px;
+    text-align:center;
+    display: flex;
+    flex-direction: column;
+}
+.author-left{
+    position: relative;
+    left: 0;
+    display: flex;
+    flex-direction: row;
+}
+.author-info{
+    padding:10px 10px;
+    display: flex;
+    flex-direction: row;
+}
+.author-img{
+    width:40rpx;
+    height:40rpx;
+    border-radius: 50%;
+    margin-top:10px;
+}
+.swiper{
+    height:480rpx;
+}
+.slide-image{
+    width:100%;
+}
+.content{
+    padding:10px 10px;
+    display: flex;
+    flex-direction: column;
+}
+.trip-top{
+    padding:10px 10px;
+    display: flex;
+    flex-direction: row;
+} 
+.location{
+    font-size: 26rpx;
+    padding:2px 5px;
+    display: flex;
+    border:1px solid #000;
+    border-radius: 10px;
+    font-family: '微软雅黑';
+} 
+.trip-title{
+    background-color: #FFD700;
+    padding:2px 5px;
+    border-radius: 10px;
+    font-size: 26rpx;
+    text-decoration:underline;
+    margin-left: 20px;
+} 
+</style>

@@ -1,0 +1,290 @@
+<template>
+    <view class="add-cover" wx:if="{{!coverImg}}" >
+        <text class="cover" @tap="getCoverImg">添加封面</text>
+    </view>
+    <view wx:if="{{!!coverImg}}">
+        <image class="coverImg"  src="{{coverImg}}" />
+        <view class="changeCover" @tap="getCoverImg">更换封面</view>
+    </view>
+
+    <view class="add-title">
+        <textarea class="add-title" placeholder="请输入游记标题" name="Text" maxlength="{{maxTextLen}}" adjust-position="true" value="{{Text}}" bind:blur="getTitle"></textarea>
+    </view>
+    <view class="add-article">
+        <textarea class="article" placeholder="请输入正文" name="Text" maxlength="{{maxTextLen}}" adjust-position="true" value="{{Text}}" bind:blur="getContent"></textarea>
+    </view>
+
+    <view class="updateimgbox {{images.length > 0 ? '' : 'hide'}}">
+          <view class="updateimglist">
+              <block wx:for="{{images}}" wx:key="{{index}}">
+                <view class="updateSmall">
+                    <view class="deleteImg" @tap="deleteImgs" data-index="{{index}}" >
+                        <van-icon  color="red"  name="clear" />
+                    </view>
+                    <view class="updateSmallimg">
+                        <image mode="aspectFill" src="{{item}}" @tap="previewImg" data-index="{{index}}" style="width:160rpx;height:160rpx;"></image>
+                    </view>
+                </view>
+              </block>
+          </view>
+      </view>
+
+    <view class="updateimgbox">
+        <view class="updateimglist">
+            <view class="updatebtn" @tap="getImages">
+                <view class="updateimg">
+                    <van-icon name="add" />
+                    <text>上传照片</text>
+                </view>
+            </view>
+          </view>
+      </view>
+
+    <view class="zt-btn" @tap="submit">
+        <button class="bg-color">发布</button>
+    </view>
+
+    
+
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class issue extends wepy.page {
+    config = {
+        navigationBarTitleText: '发布'
+    }
+
+    data = {
+        coverImg:'',        //封面图片地址
+        coverImgID:[],      //封面图片id
+        images:[],          //内容图片地址
+        imageslength: 5,    //内容图片最大数量
+        imagesID:[],        //内容图片id
+        title:'',           //文章标题
+        content:'',         //文章内容
+        userInfo:{},
+
+
+    }
+
+    methods = {
+        async getCoverImg (){
+            let coverImgID = this.data.coverImgID
+            wx.chooseImage({
+                count:1,
+                sizeType: ['original', 'compressed'], 
+                sourceType: ['album', 'camera'],
+                success: res => {
+                    this.deleteImg(coverImgID)
+                    this.coverImg = res.tempFilePaths[0]
+                    this.$apply()
+                    this.uploadImg(res.tempFilePaths[0],'coverImgID')
+                    console.log(this.data)
+                }
+            })
+        },
+        getTitle (e){
+            this.title = e.detail.value
+        },
+        getContent (e){
+            this.content = e.detail.value
+        },
+        async getImages (){
+            var that = this
+            var num = that.images.length,
+                imagesID = that.imagesID
+            if (num < that.imageslength) {
+                let leftUploadImageNum = that.imageslength - num
+                wx.chooseImage({
+                    count: leftUploadImageNum,
+                    sizeType: ['original', 'compressed'], 
+                    sourceType: ['album', 'camera'],
+                    success: function (res) {
+                        let imgres = res.tempFilePaths
+                        for(var i=0;i<imgres.length;i++){
+                            that.uploadImg(imgres[i],'imagesID')
+                        }
+                        that.images = that.images.concat(imgres)
+                        that.$apply()
+                    }
+                })
+            }else{
+                await this.$modal('提示', '已经达到最大上传照片数')
+            }
+        },
+        deleteImgs (e) {
+            this.images.splice(e.currentTarget.dataset.index, 1)
+            this.data.imagesID.splice(e.currentTarget.dataset.index, 1)
+            let fileID = this.data.imagesID[e.currentTarget.dataset.index]
+            let arr = []
+            arr.push(fileID)
+            this.deleteImg(arr)
+            this.$apply()
+        },
+        previewImg (e) {
+            let index = e.currentTarget.dataset.index
+            wx.previewImage({
+                current: this.images[index],
+                urls: this.images
+            })
+        },
+        submit (){
+            console.log(this.data)
+            const obj = {}
+        }
+    }
+
+    async uploadImg (path,type) {
+        const filePath = path
+        const timestamp = Date.parse(new Date())+Math.floor(Math.random()*10+1)
+        const cloudPath = timestamp + filePath.match(/\.[^.]+?$/)[0]
+        wx.cloud.uploadFile({
+            cloudPath:'example/'+cloudPath,
+            filePath,
+            success: res => {
+                console.log(res.fileID)
+                this.data[type] = this.data[type].concat(res.fileID)
+                this.$apply()
+            }
+        })
+    }
+
+    async deleteImg (type) {
+        wx.cloud.deleteFile({
+            fileList: type ,
+            success: res => {
+                console.log(res.fileList)
+            },
+            fail: err => {
+            }
+        })
+    }
+
+
+    
+    async onLoad () {
+        let that = this
+        const db = wx.cloud.database()
+        const _ = db.command
+        that.db = db
+        that._ = _
+        const userInfo = wx.getStorageSync('userInfo')
+        that.userInfo = userInfo
+        that.$apply()
+    }
+}
+</script>
+<style>
+page{
+   
+}
+.add-cover{
+    height:200rpx;
+    background-color: #f2f2f2;
+    text-align: center;
+    color:#999;
+    line-height: 200rpx;
+    margin:10px 10px;
+    border-radius: 5px;
+}
+.coverImg{
+    width:100%;
+    height:500rpx;
+    position:relative;
+}
+.changeCover{
+    width:110rpx;
+    height:30rpx;
+    padding:8px 10px;
+    background-color: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    font-size: 26rpx;
+    color:#f2f2f2;
+    position: absolute;
+    top:420rpx;
+    right:20rpx;
+}
+
+.add-title{
+    margin:10px 10px;
+    border-bottom: 1px solid #f2f2f2;
+    font-size: 36rpx;
+    font-weight: bold;
+    height:60rpx;
+
+}
+.add-article{
+    border-bottom: 1px solid #f2f2f2; 
+}
+.article{
+    padding:10px 10px;
+    font-size: 36rpx;
+    width:710rpx;
+
+}
+.article-icon{
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+    height:60rpx;
+    padding:5px 10px;
+    box-shadow:0  0 5px #f2f2f2;
+}
+.hide{
+    opacity:0;
+}
+.zt-btn{
+    width:60%;
+    margin:20px auto;
+}
+.bg-color{
+    background-color: #30C0AE;
+    box-shadow: 0 0 5px #999;
+}
+.updateimgbox{
+    padding:3px 0px;
+    display:flex;
+    align-items:center;
+    border-bottom:1px solid #eee;
+
+}
+.updateimglist{
+    box-sizing:border-box;
+    width:100%;
+
+}
+.updateSmall{
+    height:17.5vh;
+    margin:-30rpx 11px 15px;
+    float:left;
+
+}
+.updateSmallimg{
+    overflow:hidden;
+    position:relative;
+    z-index:1;
+}
+.updateimg{
+    display:flex;
+    flex-direction: column;
+}
+.updatebtn{
+    font-size:32rpx;
+     width:150rpx;
+    border:1px solid #eee;
+    text-align: center;
+    padding:20rpx 20rpx;
+}
+.deleteImg{
+    position: relative;
+    top:33rpx;
+    left:-18rpx;
+    z-index: 99;
+}
+.hide{
+    opacity:0;
+}
+
+
+</style>

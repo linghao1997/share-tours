@@ -1,0 +1,269 @@
+<template>
+    <view class="top">
+        <view class="author-img">
+            <image class="author-img" src="{{authorInfo.avatar_l}}" @tap="submit"/>
+        </view>
+        <view class="author-name">
+            <text>{{authorInfo.name}}</text>
+            <text style="font-size:32rpx;font-weight:400;">{{gender}}</text>
+        </view>
+        <view class="author-refer">
+            <text class="author-place">{{authorInfo.location_name}}</text>
+            <text>{{authorInfo.user_desc}}</text>
+        </view>
+    </view>
+
+    <view class="notice"><text class="notice-text" @tap="Attention">{{attentionText}}</text><view class="hr"></view></view>
+
+    <view class="info-lists">
+        <view class="info-list">笔记 <text>{{}}</text></view><text class="line">|</text>
+        <view class="info-list">攻略 <text>{{}}</text></view><text class="line">|</text>
+        <view class="info-list">游记 <text>{{}}</text></view><text class="line">|</text>
+        <view class="info-list">问答 <text>{{}}</text></view>
+    </view>
+
+    <view class="content">
+        <view class="track">TA的足迹</view>
+        <view class="trip-list">
+            <block>
+                <view class="message">
+                    <image class="cover" src="{{authorImg}}"  />
+                    <view class="refer">今天去的泰国普吉岛，普吉镇</view>
+                </view>
+                <view class="message">
+                    <image class="cover" src="{{authorImg}}"  />
+                    <view class="refer">今天去的泰国普吉岛，普吉镇</view>
+                </view>
+                <view class="message">
+                    <image class="cover" src="{{authorImg}}"  />
+                    <view class="refer">今天去的泰国普吉岛，普吉镇</view>
+                </view>
+            </block>
+        </view>
+    </view>
+
+     <van-toast id="van-toast" />
+</template>
+<script>
+  import wepy from 'wepy'
+  import Toast from '../components/vant/toast/toast';
+
+  export default class AuthorDetail extends wepy.page {
+    config = {
+      navigationBarTitleText: '用户详情'
+    }
+
+    data = {
+        authorInfo:{},
+        userInfo:{},
+        attentionText:"关注",
+        noticeJudge:false,
+
+    }
+
+    methods = {
+        Attention (){
+            this.noticeJudge = !this.noticeJudge
+            let authorId = this.data.authorInfo._id
+            let _id = this.data.userInfo._id
+            if(this.noticeJudge){
+                this.attentionText = "已关注"
+                this.userInfo.notice.push(authorId)
+                let noticeArr = this.data.userInfo.notice
+                wx.setStorageSync('userInfo', this.data.userInfo)       
+                this.update('userInfo', _id, noticeArr)                 //更新用户关注表
+                Toast('关注成功~');
+            }else{
+                this.attentionText = "关注"
+                let noticeArr = this.data.userInfo.notice
+                for(var i = 0; i < noticeArr.length; i++){
+                    if(noticeArr[i] == authorId){
+                        noticeArr.splice(i,1)
+                        console.log(noticeArr)
+                    }
+                }
+                this.userInfo.notice = noticeArr
+                wx.setStorageSync('userInfo', this.data.userInfo)
+                this.remove(authorId) 
+                Toast('取消关注~');
+            }   
+        }
+    }
+
+    computed = {
+        gender() {
+          const gender = parseInt(this.authorInfo.gender)
+          return gender === 1 ? '男' : gender === 2 ? '女' : 'unknown'
+        }
+
+    }
+
+    async  updateNotice (){
+        let noticeJudge = this.data.noticeJudge
+        if(noticeJudge){
+            this.attentionText = "已关注"
+            this.$apply()
+        }else{
+            this.attentionText = "关注"
+            this.$apply()
+        }
+    }
+
+    async remove (authorId){                        
+        let _openid = this.data.userInfo._openid
+        let _id = this.data.userInfo._id
+        this.getUserInfo(_openid)
+        let userInfo = this.data.userInfo
+        let noticeArr = this.data.userInfo.notice
+        for(var i = 0; i < noticeArr.length; i++ ){
+            if(noticeArr[i] == authorId){
+                noticeArr.splice(i,1)
+            }
+        }
+        console.log(noticeArr)
+        this.update('userInfo', _id ,noticeArr) 
+    }
+
+
+    async update (database, _id, noticeArr){
+        wx.cloud.callFunction({              
+            name: 'updateNotice',
+            data:{
+                database : database,
+                _id : _id,
+                noticeArr : noticeArr
+            },  
+            success: res => {
+            }
+        })          
+    }
+
+    async getUserInfo (_openid){                        //拿到用户详细信息
+        wx.cloud.callFunction({              
+            name: 'getUserInfo',
+            data:{
+                database:'userInfo',
+                userOpenId:_openid
+            },  
+            success: res => {
+                console.log(res.result.data[0])
+                this.userInfo = res.result.data[0]
+                this.$apply()
+            }
+        })              
+    }
+
+
+    async getAuthorInfo (database,id){
+        let that = this
+        wx.cloud.callFunction({
+                name: 'search',
+                data: {
+                    database:database,
+                    id:id
+                }
+            }).then(res => {
+                that.authorInfo = res.result.data[0]
+                let authorId = res.result.data[0]._id
+                let userInfo = wx.getStorageSync('userInfo')
+                let userNotice = userInfo.notice
+                for(var i = 0; i < userNotice.length; i++){        //校验是否已关注
+                    if(userNotice[i] == authorId){
+                        that.noticeJudge = true
+                        that.$apply()
+                        that.updateNotice()
+                    }
+                }
+                that.$apply()
+                wx.hideLoading()
+                
+            })
+    }
+
+    async onLoad (e) {
+        this.userId = e.id
+        let id = parseInt(e.id)
+        wx.showLoading({
+            title: '加载中...',
+        })
+        this.getAuthorInfo('userInfo',2387415265)
+        this.userInfo = wx.getStorageSync('userInfo')
+        console.log(this.data)
+    }
+}
+  
+</script>
+<style>
+.hr{
+    width:100%;
+/*    height:1px;*/
+    border:1px solid #ccc;
+    position:relative;
+    top:-10px;
+    z-index: -9;
+}
+.refer{
+    font-size: 26rpx;
+}
+.cover{
+    width:150px;
+    height:120px;
+    border-radius: 10px;
+    box-shadow: 0 0 5px red;
+}
+.message{
+    width:300rpx;
+    display: inline-block;
+    margin-right: 50rpx
+}
+.trip-list{
+    width:100%;
+    padding:10px 10px;
+}
+.track{
+    margin-left: 10px;
+    font-size: 48rpx;
+    font-weight: bold;
+}
+.content{
+    width:100%;
+    padding:10px 10px;
+}
+.line{
+    color:#eee;
+}
+.info-list{
+    font-size: 22rpx;
+    padding:5px 15px;  
+    width:200rpx;
+}
+.notice-text{
+    padding:5px 25px;
+    background-color: yellow;
+    border-radius: 50px;
+}
+.notice{
+    width:100%;
+    text-align:center;
+    padding:10px;
+}
+.info-lists{
+    padding:10px 10px;
+    display: flex;
+    flex-direction: row;
+
+}
+.author-name{
+    font-size: 42rpx;
+    font-weight: bold;
+}
+.author-img{
+    width:150rpx;
+    height:150rpx;
+    border-radius: 50%;
+}
+.top{
+    padding:10px 10px;
+    font-size: 26rpx;
+}  
+</style>

@@ -1,0 +1,96 @@
+<template>
+
+    <view class="collect">
+        <view >
+            <image class="image" src="{{userInfo.avatarUrl}}"/>
+        </view>
+        <view class="content">
+            <view class="title">人民去哪玩日报的笔记</view>
+            <text class="describe">成都出发，周末赏花，好去处，油菜花田111111111111111111111</text>
+            <view class="tag">
+                <text class="collec-num">73收藏</text>
+                <text class="collect-type">笔记</text>
+            </view>
+        </view>
+    </view>
+
+
+    
+
+</template>
+<script>
+  import wepy from 'wepy'
+
+  export default class userCollect extends wepy.page {
+    config = {
+      navigationBarTitleText: '我的收藏'
+    }
+
+    data = {
+        result:[],
+        userInfo:{}
+    }
+
+    methods = {
+
+    }
+
+    computed = {
+    }
+
+
+    async onLoad () {
+        this.$parent.getUserInfo().then(user => {
+        this.userInfo = user
+        this.$apply()
+        console.log(this.data)
+        })
+
+    }
+}
+  
+</script>
+<style>
+.collect{
+    padding:30rpx 20rpx;
+    width:100%;
+    height:187rpx;
+    display: flex;
+    flex-direction: row;
+    position: relative;
+    border-bottom: 1px solid #ccc;
+}
+.image{
+    width:200rpx;
+    height:200rpx;
+    border-radius: 5px;
+}
+.content{
+    margin-left: 20rpx;
+}
+.title{
+    font-family: "微软雅黑";
+    font-weight: bold;
+}
+.describe{
+    color:#999;
+    font-size: 26rpx;
+    overflow: hidden;
+}
+.tag{
+    position:absolute;
+    bottom: 10rpx;
+}
+.collec-num{
+    font-size: 26rpx;
+}
+.collect-type{
+    position: relative;
+    right: -310rpx;
+    font-size: 25rpx;
+    color:#30C0AE;
+    padding:0 3px;
+    border:1px solid #30C0AE;
+}
+
+</style>

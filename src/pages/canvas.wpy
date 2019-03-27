@@ -1,0 +1,432 @@
+<template>
+    <view class="{{cur == 0? 'hide':''}}" style="background:#000;width:{{windowWidth}}px;height:{{windowHeight}}px;">
+        <canvas  style="width:{{windowWidth}}px; height:250px;position:relative;top:{{(windowHeight-50)/2-125}}px" disable-scroll="true" bindtouchstart="uploadScaleStart" bindtouchmove="uploadScaleMove" bindtouchend="uploadScaleEnd" bindtap="mouseDown" canvas-id="handWriting"></canvas>
+    </view>
+
+<!-- <image src="{{src}}"  data-src="{{src}}" @tap="previewImg" /> -->
+
+    <view class="bottom-area">
+        <van-icon name="edit" @tap="edit"/>
+        <van-icon name="plus" @tap="addText"/>
+        <van-icon name="circle" @tap="addDdim" />
+        <van-icon name="setting-o" @tap="subCanvas"/>
+        <van-icon name="close" @tap="reset" />
+    </view>
+
+    <block wx:for="{{text}}" wx:key="index">
+        <view class="float-text" style="top:{{textTop[index]}}px;left:{{textLeft[index]}}px;" >       <!--文本输入框-->
+            <input class="textare" style="color:{{textColor}};border:{{textBorder[index]}}px solid #fff;" placeholder="{{text[index]}}" bindtouchmove="setTouchMove" bindinput="setValue" bindtouchend="setTouchEnd" data-index="{{index}}" focus="true"></input>
+        </view>
+    </block>
+
+    <block wx:for="{{graphList}}" wx:key="index">                                       <!--图形框-->
+        <view class="graph {{graphList[index] == '圆形'?'cycle':(graphList[index] == '矩形'?'':'arrow')}}" style="top:{{graphTop[index]}}px;left:{{graphLeft[index]}}px;width:{{graphWidth}}px;height:{{graphHeight}}px;border:1px solid {{textColor}};" bindtouchmove="setTouchMoveGraph"  data-index="{{index}}">  
+            <image class="arrow" style="width:{{graphWidth -10}}px;height:{{graphHeight-10}}px" wx:if="{{graphList[index] == '箭头'}}" src="{{arrowImg}}" /> 
+        </view>
+    </block>
+
+
+    <view class="bottom-select color-select" wx:if="{{show}}">                                               <!--颜色选择框-->
+        <view class="select-color {{_cur == index?'select':''}} " wx:for="{{colorArr}}" wx:key="index" style="background:{{item}};" @tap="selectLineColor" data-color="{{item}}" data-index="{{index}}" ></view>
+    </view>
+    
+    <view class="bottom-select" wx:if="{{ddim}}">   
+        <view class="ddim-list">                                             <!--图形选择框-->
+            <view class="select-ddim {{_cur == index?'select':''}} " wx:for="{{graphArr}}"  wx:key="index" @tap="selectGraph" data-index="{{index}}">{{item}}</view>
+        </view>
+        <view class="progress">
+            <van-slider value="50" bind:drag="onProgressChange" inactive-color="#f9f9f9" active-color="#f9f9f9" />
+        </view>
+    </view>
+
+</template>
+<script>
+    import wepy from 'wepy'
+
+    export default class canvas extends wepy.page {
+
+    config = {
+      navigationBarTitleText: '画布',
+      enablePullDownRefresh: false
+    }
+
+    data = {
+        zoomImg:'../util/zoom.png',                     //缩放图片
+        arrowImg:'http://ae01.alicdn.com/kf/HTB1Z__WNHvpK1RjSZPi762mwXXaK.png',
+        src:'../util/timg.png',
+        colorArr:['white','black','red','yellow','green','blue','violet'],
+        graphArr:['圆形','矩形','箭头'],
+        windowHeight:'',    //屏幕高度
+        windowWidth:'',     //屏幕宽度
+        id: 'handWriting',
+        lastLoc: { x: 0, y: 0 },    //画笔初始位置
+        isOnMoveDown: false,        //鼠标点击
+        lastTimestamp: 0,           
+        lastLineWidth: -1,  
+        lineWidth:2,        //线条宽度
+        lineColor:'',       //线条颜色
+
+        show:false,         //颜色选择框显示判断值
+        begin:false,        //是否开启画笔功能
+        _cur:0,             //选择默认值
+
+        textTop:[],            //文本输入框的默认位置
+        textLeft:[],
+        text:[],            //文本输入框数组
+        textColor:'#fff',   //文本颜色
+        clientY:'',         //文本输入框移动时的Y轴坐标
+        clientX:'',         //文本输入框移动时的X轴坐标
+        textBorder:[],      //各个文本框外边框宽度
+
+        ddim:false,         //图形选择框显示判断值 
+        graph:'',           //图形容器选择的类型
+        graphList:[],       //图形容器的类型和数量
+        graphTop:[],        //图形容器的位置
+        graphLeft:[],
+        graphWidth:50,
+        graphHeight:50,
+        startPosition:{
+            X:'',
+            Y:''
+        },
+
+
+
+        cicledata:{         //画圆的参数
+            x:'',
+            y:'',
+            r:''
+        }
+
+
+    }
+
+    methods = {
+        edit (){
+            this.show = !this.show 
+        },
+        onProgressChange (event){
+            console.log(event.detail.value)
+            this.graphWidth = event.detail.value
+            this.graphHeight = event.detail.value
+        },
+        selectLineColor (e){            //选择画笔颜色
+            this._cur = e.currentTarget.dataset.index
+            this.lineColor = e.currentTarget.dataset.color
+            this.begin = true
+            this.ddimValue = false
+        },
+        selectGraph (e){
+            this._cur = e.currentTarget.dataset.index
+            this.graph = this.graphArr[e.currentTarget.dataset.index]
+            this.graphList.push(this.graph)
+            this.graphTop.push(10)
+            this.graphLeft.push(10)
+
+            console.log(this.data)
+        },
+        setTouchMoveGraph (e){
+            console.log('11111')
+            let idx = e.currentTarget.dataset.index
+            this.graphTop[idx] = e.touches[0].clientY -20
+            this.graphLeft[idx] = e.touches[0].clientX -20
+        },
+        setTouchStartZoom (e){
+            this.startPosition.X = e.touches[0].clientX 
+            this.startPosition.Y = e.touches[0].clientY
+        },
+        reset (){               //重置画布
+            this.ctx.clearRect(0, 0, 700, 730)
+            this.ctx.drawImage(this.data.src, 0, 0, this.windowWidth, 250)
+            this.ctx.draw()
+            this.graphList = []
+            this.graphTop = []
+            this.graphLeft = []
+            this.text = []
+            this.textTop = []
+            this.textLeft = []
+            this.graphWidth = 50
+            this.graphHeight = 50
+        },
+        setValue (e){
+            let idx = e.currentTarget.dataset.index
+            this.text[idx] = e.detail.value
+        },
+        addText (){
+            console.log(this.data)
+            this.text.push('')
+            this.textTop.push(100)
+            this.textLeft.push(10)
+            this.textBorder.push(0)
+      
+        },
+        addDdim (){
+            this.ddim = !this.ddim
+        },
+        subCanvas() {               //保存生成图片  
+            let differe = (this.windowHeight-50)/2-125          
+            let ctx = this.ctx
+                ctx.beginPath()
+                ctx.font="16px sans-serif"
+                ctx.setStrokeStyle(this.textColor)  
+                for(let i=0;i<this.text.length;i++){                    //绘制文本
+                    ctx.fillText(this.text[i],this.textLeft[i] ,this.textTop[i] - differe + 20) 
+                }
+                for(let i=0;i<this.graphList.length;i++){               //绘制图形
+                    // debugger
+                    if(this.graphList[i] == '矩形'){
+                        ctx.setStrokeStyle(this.textColor)
+                        ctx.strokeRect(this.graphLeft[i], this.graphTop[i] - differe, this.graphWidth, this.graphHeight)
+                    }if(this.graphList[i] == '箭头'){
+                        ctx.drawImage(this.data.arrowImg,this.graphLeft[i],this.graphTop[i] - differe, this.graphWidth-10, this.graphHeight-10 )
+                    }if(this.graphList[i] == '圆形'){
+                        ctx.arc(this.graphLeft[i] + this.graphWidth/2,this.graphTop[i] - differe + this.graphWidth/2, this.graphWidth/2,0,2 * Math.PI)      
+                        ctx.arc(this.graphLeft[i] + this.graphWidth/2,this.graphTop[i] - differe + this.graphWidth/2, this.graphHeight/2,0,2 * Math.PI,1) 
+                    }
+                }
+                ctx.stroke()
+                ctx.draw(true)
+                ctx.draw(true)      //此处需绘制两次才能使画布生效
+
+                this.downFilePath('handWriting')
+        },
+        setTouchMove (e){           //添加文本
+            let idx = e.currentTarget.dataset.index
+            this.textBorder[idx] = 2
+            this.textLeft[idx] = e.touches[0].clientX
+            this.textTop[idx] = e.touches[0].clientY -20
+        },
+        setTouchEnd (e){
+            let that = this
+            let idx = e.currentTarget.dataset.index
+            setTimeout(function(){
+                that.textBorder[idx] = 0
+                that.$apply()
+            },2000)
+        },
+        mouseDown() {
+            this.setData({
+                isOnMoveDown: true
+            })            
+        },
+        uploadScaleStart(e) {
+            console.log(e)
+            let [touch0, touch1] = e.touches        //获取起始坐标点
+            let curLoc = {
+                x: touch0.x,        
+                y: touch0.y       
+            }
+            this.lastLoc = curLoc               //起始坐标位置
+            this.lastTimestamp = new Date().getTime()    
+            this.isOnMoveDown = true
+            this.lastLineWidth = -1
+            this.$apply()
+        },
+        uploadScaleMove(e) {
+            let ctx = this.ctx
+            let [touch0, touch1] = e.changedTouches         //获取运动路径
+            let isOnMoveDown = this.data.isOnMoveDown
+            let begin = this.data.begin
+
+            let curLoc = touch0         //  x轴的运动路径
+            let lastLoc = this.data.lastLoc     //初始位置
+            let currTimestamp = new Date().getTime() //运动到某一点的时刻
+            let lineWidth = this.lineWidth
+            let lineColor = this.lineColor
+
+            if (isOnMoveDown && begin) {
+                ctx.beginPath()         //开始绘图
+                ctx.moveTo(lastLoc.x, lastLoc.y)    
+                ctx.lineTo(curLoc.x, curLoc.y)     
+                ctx.setStrokeStyle(lineColor)         
+                ctx.setLineWidth(lineWidth) 
+                ctx.stroke()
+                ctx.draw(true)
+                this.lastLoc = curLoc
+                this.lastTimestamp = currTimestamp
+                this.lastLineWidth = lineWidth
+                this.$apply()
+                console.log(this.data)
+            }
+        },
+        uploadScaleEnd (e) {
+            console.log('1')
+            this.lastLineWidth = -1
+        }
+    }
+
+    async downFilePath (canvasId){    
+        wx.canvasToTempFilePath({
+            canvasId: canvasId,
+            success (res) {
+                console.log(res.tempFilePath)
+                wx.saveImageToPhotosAlbum({
+                    filePath:res.tempFilePath,
+                      success(result) { 
+
+                    }
+                })
+            }
+        })
+    }
+
+    calcDistance (loc1, loc2) {
+        return Math.sqrt((loc1.x - loc2.y) * (loc1.x - loc2.y) + (loc1.y - loc2.y) * (loc1.y - loc2.y)) 
+    }
+
+    async onLoad(e) {
+        let that = this
+        let id = this.data.id
+        let ctx = wx.createCanvasContext(id)
+        that.ctx = ctx
+        that.$apply()
+
+        wx.getSystemInfo({                          
+            success(res) {
+                console.log(res)
+                that.windowHeight = res.windowHeight
+                that.windowWidth = res.windowWidth
+                that.$apply()
+
+                ctx.beginPath()
+                ctx.setFillStyle('#fff')
+                ctx.setFontSize(20)
+                ctx.drawImage(that.data.src, 0, 0, res.windowWidth, 250)
+                ctx.draw(true)
+            }
+        })
+    }
+}
+  
+</script>
+<style>
+page{
+    overflow: hidden;
+}
+.zoom{
+    width:25px;
+    height:25px;
+    position:relative;
+    top:-10px;
+    left:25px;
+}
+.arrow{
+    width:30px;
+    height:30px;
+    border:0 !important;
+}
+.graph{
+    position:absolute;
+    box-sizing: border-box;
+}
+.cycle{
+    border-radius: 50%;
+}
+.float-text{
+    position:fixed;
+    z-index:9999;
+}
+.textare{
+    color:#fff;
+    font-size: 16px;
+    font-family:sans-serif;
+    font-weight: bold;
+    border-radius: 10px;
+}
+.bottom-select{
+    width:100%;
+    position:absolute;
+    bottom:48px;
+    background-color: #010101;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+}
+.color-select{
+    flex-direction: row;
+}
+.ddim-list{
+    display: flex;
+    flex-direction: row;
+    padding:10px 0;
+}
+.select-color{
+    width:20px;
+    height:20px;
+    border-radius: 50%;
+    margin-right: 40rpx;
+    border:3px solid #f9f9f9;
+    margin-left: 10rpx
+}
+.select-ddim{
+    height:20px;
+    margin-left: 25px;
+    color:#f9f9f9;
+}
+.select{
+    border:5px solid #f9f9f9;
+}
+.back{
+    width:100%;
+    position: fixed;
+    top:0;
+    left:0;
+    background-color: #010101;
+    padding:10px 20px;
+}
+.content{
+    width: 100%;
+    height:667px;
+    background-color: #010101;
+}
+.content-img{
+    width:100%;
+    display: inline-block;
+    margin:145px auto;
+}
+.content-image{
+    width:100%;
+}
+
+.bottom-area{
+    width:100%;
+    position: fixed;
+    bottom:0;
+    left:0;
+    padding:10px 20px;
+    border-top:1px solid #434343;
+    background-color: #010101;
+    display: flex;
+    flex-direction: row;
+    color:#fff;
+    z-index:999;
+}
+.edit{
+    font-size: 12px;
+    text-decoration: underline;
+    position: relative;
+    left: 0;
+    z-index:999;
+}
+.send{
+    width:120rpx;
+    color:#fff;
+    font-size: 12px;
+    background-color: green;
+    text-decoration: underline;
+    position: relative;
+    right: -220rpx;
+    z-index:999;
+}
+.hide{
+    height:0;
+}
+.bottom-area view{
+    padding:5px 25px;
+}
+.input{
+    color:#fff;
+    position:absolute;
+    bottom:100px;
+}
+</style>

@@ -1,0 +1,152 @@
+<template>
+<form report-submit="true" @submit="formSubmit">
+    <view id="index" class="main">
+        <view class="userAvatar">
+            <view><image src="{{userAvatarUrl}}" /></view>
+            <view class="Avatarname">{{userNickName}}</view>
+            <view class="validperiod">
+                <button wx:if="{{!userAvatarUrl}}" class="validBtn"  open-type="getUserInfo" bindgetuserinfo="bindGetUserInfo">授权登录</button>
+            </view>
+        </view>
+
+        <view class="zan-panel">
+            <van-cell title="个人资料" icon="user-o" is-link size="large" url="/pages/user-info"/>
+            <van-cell title="我的收藏" icon="like-o" is-link size="large" url="/pages/user-collect"/>
+            <van-cell title="我的关注" icon="label-o" is-link size="large" url="/pages/user-notice"/>
+            <van-cell title="我的发布" icon="sign" is-link size="large" url="/pages/user-release"/>
+            <van-cell title="我的足迹" icon="browsing-history-o" is-link size="large" url="/pages/index"/>
+        </view>
+
+        <view class="zan-panel">
+            <van-cell title="授权管理" icon="sign" is-link size="large" url="/pages/user-release"/>
+            <van-cell title="字体大小" icon="browsing-history-o" is-link size="large" url="/pages/index"/>
+        </view>
+
+        <button size="mini" @tap="Select">查询</button>
+        <button size="mini" @tap="add">添加</button>
+        <button size="mini" @tap="Delete">删除</button>
+        <button size="mini" @tap="Detail">修改</button>
+    </view>
+</form>
+</template>
+<script>
+
+    import wepy from 'wepy'
+
+    export default class UserCenterPage extends wepy.page {
+        config = {
+            navigationBarTitleText: '我的',
+            enablePullDownRefresh: false
+        }
+        data = {
+            userAvatarUrl:'',
+            userNickName:'',
+            canIUse: wx.canIUse('button.open-type.getUserInfo')
+        }
+        methods = {
+            bindGetUserInfo(e) {
+                console.log(e.detail.userInfo)
+                this.canIUse = false
+                this.userAvatarUrl = e.detail.userInfo.avatarUrl
+                this.userNickName = e.detail.userInfo.nickName
+                let data = {
+                    name : e.detail.userInfo.nickName,
+                    avatar_l : e.detail.userInfo.avatarUrl,
+                    country_code : e.detail.userInfo.language,
+                    gender : e.detail.userInfo.gender,
+                    is_hunter : false,
+                    location_name : e.detail.userInfo.country + '_' + e.detail.userInfo.city,
+                    collect:[],
+                    noitce:[],
+                }
+                wx.setStorageSync('userInfo', data)
+                let _openid = wx.getStorageSync('openId')
+                wx.cloud.callFunction({              
+                    name: 'getUserInfo',
+                    data:{
+                        database:'userInfo',
+                        userOpenId:_openid
+                    },  
+                    success: res => {
+                        console.log(res)
+                        if(!res.result.data.length){            //判断用户openid是否存在，如果没有则是第一次登录，将用户添加至用户表中
+                            this.$parent.Add('userInfo',data)
+                        }
+                    }
+                }) 
+            },
+            
+        }
+
+        async onLoad () {
+            let that = this
+            wx.getSetting({
+                success(res) {
+                    if (res.authSetting['scope.userInfo']) {
+                    wx.getUserInfo({
+                        success(res) {
+                            console.log(res.userInfo)
+                            wx.setStorageSync('userInfo', res.userInfo)
+                            that.userAvatarUrl = res.userInfo.avatarUrl
+                            that.userNickName = res.userInfo.nickName
+                            that.$apply()
+                            }
+                        })
+                    }
+                }
+            })
+
+            let _openid = wx.getStorageSync('openId')
+            wx.cloud.callFunction({                 //从useInfo数据库中查找openid对应的信息
+                name: 'getUserInfo',
+                data:{
+                    database:'userInfo',
+                    userOpenId:_openid
+                },
+                success: res => {
+                    console.log(res.result.data[0])
+                }
+            })
+        }
+    }
+</script>
+<style >
+.zan-panel{
+  border-top:8px solid #eee;
+  margin:0px;
+}
+
+.userAvatar{
+  padding:20px 0px;
+  color:#fff;
+  font-size:14px;
+  text-align:center;
+  background-color: #30C0AE;
+}
+.userAvatar image{
+    width:70px;
+    height:70px;
+    border-radius:100%;
+    background-color: yellow;
+}
+.userAvatar text{ 
+    display:inline-block;
+    background-color:rgb(255, 153, 0);
+     border-radius:3px; 
+     color:#fff;
+     padding:2px 10px; 
+     font-size:13px;
+      margin-left:10px;
+  }
+.Avatarname{ 
+    padding-top:10px;
+}
+.validperiod{
+    width:200rpx;
+    color:#fff;
+    margin:0 auto;
+}
+.validBtn{
+    font-size: 24rpx;
+}
+</style>
